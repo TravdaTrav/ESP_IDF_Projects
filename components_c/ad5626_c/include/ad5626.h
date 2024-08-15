@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _AD5626_H_
+#define _AD5626_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,4 +16,6 @@ esp_err_t ad5626_clear_level_reg(void);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

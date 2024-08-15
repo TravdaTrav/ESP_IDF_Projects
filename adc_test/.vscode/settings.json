@@ -13,5 +13,15 @@
     ],
     "idf.portWin": "COM4",
     "idf.pythonBinPathWin": "C:\\Espressif\\python_env\\idf5.2_py3.11_env\\Scripts\\python.exe",
-    "idf.toolsPathWin": "C:\\Espressif"
+    "idf.toolsPathWin": "C:\\Espressif",
+    "files.associations": {
+        "unordered_map": "cpp",
+        "istream": "cpp",
+        "numeric": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "fstream": "cpp",
+        "string.h": "c",
+        "component_template.h": "c"
+    }
 }

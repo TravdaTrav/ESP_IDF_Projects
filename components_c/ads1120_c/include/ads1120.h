@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _ADS1120_H_
+#define _ADS1120_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,4 +109,6 @@ esp_err_t ads1120_set_drdy_mode(uint8_t value);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

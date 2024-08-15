@@ -17,6 +17,7 @@
 
 #include "ad5626.h"
 #include "ads1120.h"
+#include "ads1120.hpp"
 #include "component_template.h"
 
 extern "C" void app_main(void)
@@ -30,6 +31,8 @@ extern "C" void app_main(void)
     spi_cfg.max_transfer_sz = 32;
 
     esp_err_t ret = spi_bus_initialize(SPI2_HOST, &spi_cfg, SPI_DMA_CH_AUTO);
+
+    ADS1120 ads1120;
 
     printf("Hello world!\n");
     int8_t cs_pin = 2;
