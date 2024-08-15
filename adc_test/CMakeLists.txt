@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Linking the shared components directory to the project
-set(EXTRA_COMPONENT_DIRS "../components")
+set(EXTRA_COMPONENT_DIRS "../components_c")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(adc_test)
