@@ -1,19 +1,16 @@
 #include "ADS1120.hpp"
 
-
 #define ADS_SPI_BUS SPI2_HOST
 #define ADS_SPI_LOCK_TIMEOUT 10
-#define ADS_SPI_CLOCK_SPEED_HZ  1*1000*1000
+#define ADS_SPI_CLOCK_SPEED_HZ 1 * 1000 * 1000
 #define ADS_SPI_MODE 1
 #define ADS_CS_EN_PRE_WAIT_CYCLES 2
 #define ADS_CS_EN_POST_WAIT_CYCLES 0
 #define ADS_SPI_INPUT_DELAY_NS 0
 
-
 ADS1120::ADS1120()
 {
 }
-
 
 esp_err_t ADS1120::sendCommand(uint8_t command)
 {
@@ -23,69 +20,71 @@ esp_err_t ADS1120::sendCommand(uint8_t command)
 
   t.flags = SPI_TRANS_USE_TXDATA;
   t.tx_data[0] = command;
-	t.length = 1*8;
-  
-  ret=spi_device_polling_transmit(spi_dev, &t);  //Transmit!
+  t.length = 1 * 8;
+
+  ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
   return ret;
 }
 
-esp_err_t ADS1120::writeRegister(uint8_t address, uint8_t value) {
-	
+esp_err_t ADS1120::writeRegister(uint8_t address, uint8_t value)
+{
+
   esp_err_t ret;
   spi_transaction_t t;
   memset(&t, 0, sizeof(spi_transaction_t));
 
   t.flags = SPI_TRANS_USE_TXDATA;
-  t.tx_data[0] = (ADS1120_CMD_WREG | (address << 2) );
+  t.tx_data[0] = (ADS1120_CMD_WREG | (address << 2));
   t.tx_data[1] = value;
-  t.length = 2*8; // 2 bytes
+  t.length = 2 * 8; // 2 bytes
 
-  ret=spi_device_polling_transmit(spi_dev, &t);  //Transmit!
+  ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
   return ret;
 }
 
-esp_err_t ADS1120::readRegister(uint8_t address, uint8_t* data)
+esp_err_t ADS1120::readRegister(uint8_t address, uint8_t *data)
 {
   esp_err_t ret;
   spi_transaction_t t;
   memset(&t, 0, sizeof(spi_transaction_t));
 
   t.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
-	t.length = 2*8; // 2 bytes
-  t.rxlength = 2*8; // 2 bytes
+  t.length = 2 * 8;   // 2 bytes
+  t.rxlength = 2 * 8; // 2 bytes
   t.tx_data[0] = (ADS1120_CMD_RREG | (address << 2));
   t.tx_data[1] = ADS1120_SPI_MASTER_DUMMY;
 
-  ret=spi_device_polling_transmit(spi_dev, &t);  //Transmit!
+  ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
   *data = t.rx_data[1];
   return ret;
 }
 
-esp_err_t ADS1120::init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_t spi_host) {
-	// Set pins up
-	ADS1120_CS_PIN = cs_pin;
-	ADS1120_DRDY_PIN = drdy_pin;
+esp_err_t ADS1120::init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_t spi_host)
+{
+  // Set pins up
+  ADS1120_CS_PIN = cs_pin;
+  ADS1120_DRDY_PIN = drdy_pin;
 
-  gpio_set_direction((gpio_num_t) ADS1120_CS_PIN, GPIO_MODE_OUTPUT);
-  gpio_set_direction((gpio_num_t) ADS1120_DRDY_PIN, GPIO_MODE_INPUT);
+  gpio_set_direction((gpio_num_t)ADS1120_CS_PIN, GPIO_MODE_OUTPUT);
+  gpio_set_direction((gpio_num_t)ADS1120_DRDY_PIN, GPIO_MODE_INPUT);
 
-	spi_device_interface_config_t devcfg;
+  spi_device_interface_config_t devcfg;
 
-	devcfg.mode=ADS_SPI_MODE;
-	devcfg.cs_ena_pretrans=ADS_CS_EN_PRE_WAIT_CYCLES;
-	devcfg.cs_ena_posttrans=ADS_CS_EN_POST_WAIT_CYCLES;
-	devcfg.clock_speed_hz=ADS_SPI_CLOCK_SPEED_HZ;
-	devcfg.input_delay_ns=ADS_SPI_INPUT_DELAY_NS;
-	devcfg.spics_io_num=ADS1120_CS_PIN;             //CS pin
-    devcfg.flags=0;
-	devcfg.queue_size=1;
+  devcfg.mode = ADS_SPI_MODE;
+  devcfg.cs_ena_pretrans = ADS_CS_EN_PRE_WAIT_CYCLES;
+  devcfg.cs_ena_posttrans = ADS_CS_EN_POST_WAIT_CYCLES;
+  devcfg.clock_speed_hz = ADS_SPI_CLOCK_SPEED_HZ;
+  devcfg.input_delay_ns = ADS_SPI_INPUT_DELAY_NS;
+  devcfg.spics_io_num = ADS1120_CS_PIN; // CS pin
+  devcfg.flags = 0;
+  devcfg.queue_size = 1;
 
-	spi_bus_add_device(ADS_SPI_BUS, &devcfg, &spi_dev);
+  spi_bus_add_device(ADS_SPI_BUS, &devcfg, &spi_dev);
   vTaskDelay(5);
 
-	reset();      
+  reset();
   vTaskDelay(5);
-    return startSync();                        // Send start/sync for continuous conversion mode
+  return startSync(); // Send start/sync for continuous conversion mode
 }
 
 bool ADS1120::isDataReady()
@@ -93,19 +92,19 @@ bool ADS1120::isDataReady()
   return gpio_get_level(ADS1120_DRDY_PIN);
 }
 
-esp_err_t ADS1120::readADC(uint16_t* data)
+esp_err_t ADS1120::readADC(uint16_t *data)
 {
   esp_err_t ret;
   spi_transaction_t t;
   memset(&t, 0, sizeof(spi_transaction_t));
-  
+
   t.flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA;
   memset(t.tx_data, ADS1120_SPI_MASTER_DUMMY, 2);
-  
-	t.length = 2*8; // 2 bytes
-  t.rxlength = 2*8; // 2 bytes
 
-  ret=spi_device_polling_transmit(spi_dev, &t);  //Transmit!
+  t.length = 2 * 8;   // 2 bytes
+  t.rxlength = 2 * 8; // 2 bytes
+
+  ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
   *data = t.rx_data[0];
   *data = (*data << 8) | t.rx_data[1];
   return ret;
@@ -115,7 +114,7 @@ esp_err_t ADS1120::writeRegisterMasked(uint8_t value, uint8_t mask, uint8_t addr
 {
   // Escribe un valor en el registro, aplicando la mascara para tocar unicamente los bits necesarios.
   // No realiza el corrimiento de bits (shift), hay que pasarle ya el valor corrido a la posicion correcta
-  
+
   // Leo el contenido actual del registro
   uint8_t register_contents;
   readRegister(address, &register_contents);

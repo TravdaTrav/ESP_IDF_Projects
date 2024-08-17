@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-#define ADS1120_SPI_MASTER_DUMMY   0xFF
+#define ADS1120_SPI_MASTER_DUMMY 0xFF
 // Commands for the ADC
 #define ADS1120_CMD_RESET 0x07
 #define ADS1120_CMD_START_SYNC 0x08
@@ -49,40 +49,42 @@
 #define ADS1120_REG_MASK_DRDY_MODE 0x02
 #define ADS1120_REG_MASK_RESERVED 0x01
 
-class ADS1120 {
-  public:
-    ADS1120();
+class ADS1120
+{
+public:
+  ADS1120();
 
-    esp_err_t writeRegister(uint8_t address, uint8_t value);
-    esp_err_t readRegister(uint8_t address, uint8_t* data);
-    esp_err_t init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_t spi_host);
-    bool isDataReady(void);
-    esp_err_t readADC(uint16_t* data);
-    esp_err_t sendCommand(uint8_t command);
-    esp_err_t reset(void);
-    esp_err_t startSync(void);
-    esp_err_t powerDown(void);
-    esp_err_t rdata(void);
-    esp_err_t writeRegisterMasked(uint8_t value, uint8_t mask, uint8_t address);
-    esp_err_t setMultiplexer(uint8_t value);
-    esp_err_t setGain(uint8_t gain);
-    esp_err_t setPGAbypass(bool value);
-    esp_err_t setDataRate(uint8_t value);
-    esp_err_t setOpMode(uint8_t value);
-    esp_err_t setConversionMode(uint8_t value);
-    esp_err_t setTemperatureMode(uint8_t value);
-    esp_err_t setBurnoutCurrentSources(bool value);
-    esp_err_t setVoltageRef(uint8_t value);
-    esp_err_t setFIR(uint8_t value);
-    esp_err_t setPowerSwitch(uint8_t value);
-    esp_err_t setIDACcurrent(uint8_t value);
-    esp_err_t setIDAC1routing(uint8_t value);
-    esp_err_t setIDAC2routing(uint8_t value);
-    esp_err_t setDRDYmode(uint8_t value);
-  private:
-    gpio_num_t ADS1120_CS_PIN;
-    gpio_num_t ADS1120_DRDY_PIN;
-	  spi_device_handle_t spi_dev;
+  esp_err_t writeRegister(uint8_t address, uint8_t value);
+  esp_err_t readRegister(uint8_t address, uint8_t *data);
+  esp_err_t init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_t spi_host);
+  bool isDataReady(void);
+  esp_err_t readADC(uint16_t *data);
+  esp_err_t sendCommand(uint8_t command);
+  esp_err_t reset(void);
+  esp_err_t startSync(void);
+  esp_err_t powerDown(void);
+  esp_err_t rdata(void);
+  esp_err_t writeRegisterMasked(uint8_t value, uint8_t mask, uint8_t address);
+  esp_err_t setMultiplexer(uint8_t value);
+  esp_err_t setGain(uint8_t gain);
+  esp_err_t setPGAbypass(bool value);
+  esp_err_t setDataRate(uint8_t value);
+  esp_err_t setOpMode(uint8_t value);
+  esp_err_t setConversionMode(uint8_t value);
+  esp_err_t setTemperatureMode(uint8_t value);
+  esp_err_t setBurnoutCurrentSources(bool value);
+  esp_err_t setVoltageRef(uint8_t value);
+  esp_err_t setFIR(uint8_t value);
+  esp_err_t setPowerSwitch(uint8_t value);
+  esp_err_t setIDACcurrent(uint8_t value);
+  esp_err_t setIDAC1routing(uint8_t value);
+  esp_err_t setIDAC2routing(uint8_t value);
+  esp_err_t setDRDYmode(uint8_t value);
+
+private:
+  gpio_num_t ADS1120_CS_PIN;
+  gpio_num_t ADS1120_DRDY_PIN;
+  spi_device_handle_t spi_dev;
 };
 
 #endif
