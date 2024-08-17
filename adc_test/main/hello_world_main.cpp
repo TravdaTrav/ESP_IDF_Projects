@@ -15,9 +15,8 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
-#include "ad5626.h"
-#include "ads1120.h"
 #include "ads1120.hpp"
+#include "ad5626.hpp"
 #include "component_template.h"
 
 extern "C" void app_main(void)
@@ -35,12 +34,6 @@ extern "C" void app_main(void)
     ADS1120 ads1120;
 
     printf("Hello world!\n");
-    int8_t cs_pin = 2;
-    gpio_num_t ldac_pin = GPIO_NUM_12;
-    gpio_num_t clr_pin = GPIO_NUM_13;
-    spi_host_device_t spi_host = SPI2_HOST;
-
-    ad5626_spi_init(cs_pin, ldac_pin, clr_pin, spi_host);
 
     comp_temp_func();
 
