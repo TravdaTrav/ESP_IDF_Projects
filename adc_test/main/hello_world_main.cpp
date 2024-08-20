@@ -22,27 +22,38 @@
 extern "C" void app_main(void)
 {
     spi_bus_config_t spi_cfg;
-    spi_cfg.mosi_io_num = 10;
+    memset(&spi_cfg, 0, sizeof(spi_cfg));
+    spi_cfg.mosi_io_num = 18;
     spi_cfg.miso_io_num = -1;
-    spi_cfg.sclk_io_num = 12;
+    spi_cfg.sclk_io_num = 19;
     spi_cfg.quadwp_io_num = -1;
     spi_cfg.quadhd_io_num = -1;
-    spi_cfg.max_transfer_sz = 32;
+
+    vTaskDelay(500);
 
     esp_err_t ret = spi_bus_initialize(SPI2_HOST, &spi_cfg, SPI_DMA_CH_AUTO);
 
-    ADS1120 ads1120;
+    AD5626 ad5626;
 
-    printf("Hello world!\n");
+    gpio_num_t ldac_pin = GPIO_NUM_0;
+    gpio_num_t cs_pin = GPIO_NUM_1;
+    gpio_num_t clr_pin = GPIO_NUM_2;
 
-    comp_temp_func();
-
-    for (int i = 10; i >= 0; i--)
+    esp_err_t err = ad5626.init(cs_pin, ldac_pin, clr_pin, SPI2_HOST);
+    if (err != ESP_OK)
     {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        printf("Failed to initialize ad5626\n");
     }
-    printf("Restarting now.\n");
+
+    uint16_t val = 0;
+
+    for (int i = 0; i < 12; i++)
+    {
+        val = 0x0800 >> i;
+        ad5626.set_level(val);
+        printf("Setting Level #%d!\n", i);
+        vTaskDelay(500);
+    }
+
     fflush(stdout);
-    esp_restart();
 }

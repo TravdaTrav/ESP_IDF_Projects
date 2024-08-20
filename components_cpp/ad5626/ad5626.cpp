@@ -17,8 +17,9 @@ esp_err_t AD5626::init(const gpio_num_t cs_pin, const gpio_num_t ldac_pin, const
     this->clr_pin = clr_pin;
 
     spi_device_interface_config_t ad5626_cfg;
+    memset(&ad5626_cfg, 0, sizeof(ad5626_cfg));
 
-    ad5626_cfg.mode = 2;
+    ad5626_cfg.mode = 3;
     ad5626_cfg.clock_speed_hz = 1000000;
     ad5626_cfg.spics_io_num = cs_pin;
     ad5626_cfg.flags = SPI_DEVICE_HALFDUPLEX;
@@ -58,13 +59,12 @@ esp_err_t AD5626::init(const gpio_num_t cs_pin, const gpio_num_t ldac_pin, const
 
 esp_err_t AD5626::set_level(const uint16_t new_dac_level)
 {
-    
-    uint8_t val_array[2];
-    uint16_t shifted_new_level = new_dac_level << 4;
-    memcpy(val_array, &shifted_new_level, 2);
-
     spi_transaction_t t;
-    t.tx_buffer = val_array;
+    memset(&t, 0, sizeof(spi_transaction_t));
+    uint8_t new_level[2];
+    new_level[0] = ((new_dac_level & 0x0F00) / 16) + ((new_dac_level & 0x00F0) / 16);
+    new_level[1] = ((new_dac_level & 0x000F) * 16);
+    t.tx_buffer = &new_level;
     t.length = 12;
 
     esp_err_t ret = spi_device_polling_transmit(this->spi_dev, &t);
