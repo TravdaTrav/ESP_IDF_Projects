@@ -15,14 +15,23 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
+#include <uros_network_interfaces.h>
+#include <rcl/rcl.h>
+#include <rcl/error_handling.h>
+#include <std_msgs/msg/int32.h>
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+
 #include "ads1120.hpp"
 #include "ad5626.hpp"
 #include "component_template.h"
 
 extern "C" void app_main(void)
 {
+    rcl_node_t node;
+
     spi_bus_config_t spi_cfg;
-    memset(&spi_cfg, 0, sizeof(spi_cfg));
+    memset(&spi_cfg, 0, sizeof(spi_bus_config_t));
     spi_cfg.mosi_io_num = 18;
     spi_cfg.miso_io_num = -1;
     spi_cfg.sclk_io_num = 19;

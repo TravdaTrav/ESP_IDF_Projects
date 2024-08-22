@@ -1,9 +1,13 @@
 FROM espressif/idf
 
-ARG DEBIAN_FRONTEND=nointeractive
+ARG DEBIAN_FRONTEND=noninteractive
 ARG CONTAINER_USER=esp
 ARG USER_UID=1050
 ARG USER_GID=$USER_UID
+
+RUN echo "Set disable_coredump false" >> /etc/sudo.conf
+
+RUN apt update -q
 
 RUN apt-get update \
   && apt install -y -q \
@@ -13,6 +17,22 @@ RUN apt-get update \
   libnuma1 \
   libpixman-1-0 \
   && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update \
+  && apt install -y -q -yq \
+  sudo --option=Dpkg::Options::=--force-confdef\
+  lsb-release \
+  gosu \
+  nano \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY ./install_micro_ros_deps_script.sh /install_micro_ros_deps_script.sh
+
+RUN mkdir -p /tmp/install_micro_ros_deps_script && mv /install_micro_ros_deps_script.sh /tmp/install_micro_ros_deps_script/ && \
+    IDF_EXPORT_QUIET=1 /tmp/install_micro_ros_deps_script/install_micro_ros_deps_script.sh && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN /usr/bin/pip3 --no-cache-dir install --break-system-packages catkin_pkg lark-parser colcon-common-extensions importlib-resources
 
 # QEMU
 ENV QEMU_REL=esp_develop_8.2.0_20240122
@@ -41,7 +61,6 @@ ENV USER=${CONTAINER_USER}
 WORKDIR /home/${CONTAINER_USER}
 
 RUN echo "source /opt/esp/idf/export.sh > /dev/null 2>&1" >> ~/.bashrc
-
 ENTRYPOINT [ "/opt/esp/entrypoint.sh" ]
 
 CMD ["/bin/bash", "-c"]

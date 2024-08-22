@@ -17,7 +17,7 @@ esp_err_t AD5626::init(const gpio_num_t cs_pin, const gpio_num_t ldac_pin, const
     this->clr_pin = clr_pin;
 
     spi_device_interface_config_t ad5626_cfg;
-    memset(&ad5626_cfg, 0, sizeof(ad5626_cfg));
+    memset(&ad5626_cfg, 0, sizeof(spi_device_interface_config_t));
 
     ad5626_cfg.mode = 3;
     ad5626_cfg.clock_speed_hz = 1000000;
