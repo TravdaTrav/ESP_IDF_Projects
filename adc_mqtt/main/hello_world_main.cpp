@@ -10,14 +10,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "esp_chip_info.h"
-#include "esp_flash.h"
 #include "esp_system.h"
+#include "esp_wifi.h"
 
 #include "ads1120.hpp"
 #include "ad5626.hpp"
 
-#include "ads1120.h"
+#include "wifi_manager.h"
+#include "mqtt_manager.h"
 
 #define SPI_MOSI_PIN    10
 #define SPI_MISO_PIN    9
@@ -26,27 +26,22 @@
 #define ADC_CS_PIN      5
 #define ADC_DRDY_PIN    4
 
-#define RTOS_QUEUE_SIZE                 200
-#define MQTT_PORT                       1883
-#define MQTT_MESSAGE_LENGTH             40
-#define MQTT_SEND_MESSAGE_THRESHHOLD    RTOS_QUEUE_SIZE / 20
+#define RTOS_QUEUE_SIZE                 40
 
 static SemaphoreHandle_t start_recording_task;
 
-static QueueHandle_t data_queue = 0;
-
-typedef struct mqtt_message
-{
-    uint32_t milliseconds;
-    uint16_t data[MQTT_MESSAGE_LENGTH];
-} mqtt_message_t;
+static QueueHandle_t data_queue;
 
 static void send_mqtt_task(void* arg)
 {
-    printf("Starting MQTT Task\n");
+    wifi_start();
 
-    xSemaphoreGive(start_recording_task);
+    mqtt_start();
 
+    if (mqtt_can_send_received())
+    {
+        xSemaphoreGive(start_recording_task);
+    }
     mqtt_message_t message;
 
     uint32_t count = 0;
@@ -59,9 +54,11 @@ static void send_mqtt_task(void* arg)
 
             count++;
 
+            mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
+
             if (count % 40 == 0)
             {
-                printf("Got 40 samples: %d\n", xTaskGetTickCount());
+                printf("Got 40 samples: %d\n", (int) xTaskGetTickCount());
             }
         }
     }
@@ -80,7 +77,7 @@ static void read_adc_task(void* arg)
     spi_cfg.quadwp_io_num = -1;
     spi_cfg.quadhd_io_num = -1;
 
-    esp_err_t ret = spi_bus_initialize(SPI2_HOST, &spi_cfg, SPI_DMA_CH_AUTO);
+    spi_bus_initialize(SPI2_HOST, &spi_cfg, SPI_DMA_CH_AUTO);
 
     ADS1120 ads1120;
 
@@ -137,7 +134,7 @@ static void read_adc_task(void* arg)
 
 extern "C" void app_main(void)
 {
-    data_queue = xQueueCreate(40, sizeof(mqtt_message_t));
+    data_queue = xQueueCreate(RTOS_QUEUE_SIZE, sizeof(mqtt_message_t));
 
     xTaskCreatePinnedToCore(read_adc_task, "read_adc", 1024, NULL, 2, NULL, 0);
 
