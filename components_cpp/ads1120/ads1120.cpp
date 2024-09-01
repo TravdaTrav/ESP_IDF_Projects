@@ -62,11 +62,11 @@ esp_err_t ADS1120::readRegister(uint8_t address, uint8_t *data)
 esp_err_t ADS1120::init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_t spi_host)
 {
   // Set pins up
-  ADS1120_CS_PIN = cs_pin;
-  ADS1120_DRDY_PIN = drdy_pin;
+  this->ADS1120_CS_PIN = cs_pin;
+  this->ADS1120_DRDY_PIN = drdy_pin;
 
-  gpio_set_direction((gpio_num_t)ADS1120_CS_PIN, GPIO_MODE_OUTPUT);
-  gpio_set_direction((gpio_num_t)ADS1120_DRDY_PIN, GPIO_MODE_INPUT);
+  gpio_set_direction(this->ADS1120_CS_PIN, GPIO_MODE_OUTPUT);
+  gpio_set_direction(this->ADS1120_DRDY_PIN, GPIO_MODE_INPUT);
 
   spi_device_interface_config_t devcfg;
 
@@ -75,7 +75,7 @@ esp_err_t ADS1120::init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_
   devcfg.cs_ena_posttrans = ADS_CS_EN_POST_WAIT_CYCLES;
   devcfg.clock_speed_hz = ADS_SPI_CLOCK_SPEED_HZ;
   devcfg.input_delay_ns = ADS_SPI_INPUT_DELAY_NS;
-  devcfg.spics_io_num = ADS1120_CS_PIN; // CS pin
+  devcfg.spics_io_num = this->ADS1120_CS_PIN; // CS pin
   devcfg.flags = 0;
   devcfg.queue_size = 1;
 
