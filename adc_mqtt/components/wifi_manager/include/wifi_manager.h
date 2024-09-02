@@ -8,7 +8,13 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 void wifi_start(void);
+
+void wifi_connect(void);
+
+bool wifi_is_connected(void);
 
 // Need to define functions as extern if compiling for C++
 #ifdef __cplusplus

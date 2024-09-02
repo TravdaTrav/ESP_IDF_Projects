@@ -1,6 +1,9 @@
+#include "esp_log.h"
+
 #include "ADS1120.hpp"
 
-#define ADS_SPI_BUS SPI2_HOST
+static const char* TAG = "ads1120";
+
 #define ADS_SPI_LOCK_TIMEOUT 10
 #define ADS_SPI_CLOCK_SPEED_HZ 1 * 1000 * 1000
 #define ADS_SPI_MODE 1
@@ -22,7 +25,7 @@ esp_err_t ADS1120::sendCommand(uint8_t command)
   t.tx_data[0] = command;
   t.length = 1 * 8;
 
-  ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
+  ret = spi_device_polling_transmit(this->spi_dev, &t); // Transmit!
   return ret;
 }
 
@@ -38,7 +41,7 @@ esp_err_t ADS1120::writeRegister(uint8_t address, uint8_t value)
   t.tx_data[1] = value;
   t.length = 2 * 8; // 2 bytes
 
-  ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
+  ret = spi_device_polling_transmit(this->spi_dev, &t); // Transmit!
   return ret;
 }
 
@@ -54,7 +57,7 @@ esp_err_t ADS1120::readRegister(uint8_t address, uint8_t *data)
   t.tx_data[0] = (ADS1120_CMD_RREG | (address << 2));
   t.tx_data[1] = ADS1120_SPI_MASTER_DUMMY;
 
-  ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
+  ret = spi_device_polling_transmit(this->spi_dev, &t); // Transmit!
   *data = t.rx_data[1];
   return ret;
 }
@@ -69,7 +72,9 @@ esp_err_t ADS1120::init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_
   gpio_set_direction(this->ADS1120_DRDY_PIN, GPIO_MODE_INPUT);
 
   spi_device_interface_config_t devcfg;
+  memset(&devcfg, 0, sizeof(spi_device_interface_config_t));
 
+  devcfg.clock_source = SPI_CLK_SRC_DEFAULT;
   devcfg.mode = ADS_SPI_MODE;
   devcfg.cs_ena_pretrans = ADS_CS_EN_PRE_WAIT_CYCLES;
   devcfg.cs_ena_posttrans = ADS_CS_EN_POST_WAIT_CYCLES;
@@ -79,7 +84,14 @@ esp_err_t ADS1120::init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_
   devcfg.flags = 0;
   devcfg.queue_size = 1;
 
-  spi_bus_add_device(ADS_SPI_BUS, &devcfg, &spi_dev);
+  esp_err_t err = spi_bus_add_device(spi_host, &devcfg, &spi_dev);
+  if (err != ESP_OK)
+  {
+    return err;
+  }
+
+  ESP_LOGI(TAG, "Added SPI Device to Bus\n");
+
   vTaskDelay(5);
 
   reset();
@@ -89,7 +101,7 @@ esp_err_t ADS1120::init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_
 
 bool ADS1120::isDataReady()
 {
-  return gpio_get_level(ADS1120_DRDY_PIN);
+  return !gpio_get_level(ADS1120_DRDY_PIN);
 }
 
 esp_err_t ADS1120::readADC(uint16_t *data)

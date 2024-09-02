@@ -3,8 +3,11 @@
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "mqtt_client.h"
+#include "esp_log.h"
 
 #include "mqtt_manager.h"
+
+static const char* TAG = "mqtt_manager";
 
 #define MQTT_PUBLISH_TOPIC              "esp32/publish"
 #define MQTT_SUBSCRIBE_TOPIC            "esp32/can_send"
