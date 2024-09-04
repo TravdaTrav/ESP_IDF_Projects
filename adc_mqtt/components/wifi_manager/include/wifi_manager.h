@@ -10,9 +10,9 @@ extern "C" {
 
 #include <stdbool.h>
 
-void wifi_start(void);
+esp_err_t wifi_start(void);
 
-void wifi_connect(void);
+esp_err_t wifi_connect(void);
 
 bool wifi_is_connected(void);
 

@@ -18,9 +18,9 @@ typedef struct mqtt_message
     uint16_t data[MQTT_MESSAGE_LENGTH];
 } mqtt_message_t;
 
-void mqtt_start(void);
+esp_err_t mqtt_start(void);
 
-void mqtt_send_message(const char* msg, const uint16_t msg_length);
+esp_err_t mqtt_send_message(const char* msg, const uint16_t msg_length);
 
 bool mqtt_can_send_received(void);
 

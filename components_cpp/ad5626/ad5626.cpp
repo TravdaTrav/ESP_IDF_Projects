@@ -57,7 +57,7 @@ esp_err_t AD5626::init(const gpio_num_t cs_pin, const gpio_num_t ldac_pin, const
     return spi_bus_add_device(spi_host, &ad5626_cfg, &(this->spi_dev));
 }
 
-esp_err_t AD5626::set_level(const uint16_t new_dac_level)
+esp_err_t AD5626::setLevel(const uint16_t new_dac_level)
 {
     spi_transaction_t t;
     memset(&t, 0, sizeof(spi_transaction_t));
@@ -88,7 +88,7 @@ esp_err_t AD5626::set_level(const uint16_t new_dac_level)
     return ESP_OK;
 }
 
-esp_err_t AD5626::clear_level(void)
+esp_err_t AD5626::clearLevel(void)
 {
     if (this->clr_pin < 0)
     {

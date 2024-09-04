@@ -47,7 +47,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-void wifi_start(void)
+esp_err_t wifi_start(void)
 {
     s_wifi_event_group = xEventGroupCreate();
 
@@ -60,7 +60,7 @@ void wifi_start(void)
     tutorial_netif = esp_netif_create_default_wifi_sta();
     if (tutorial_netif == NULL) {
         ESP_LOGI(TAG, "Failed to create default WiFi STA interface");
-        return;
+        return ESP_FAIL;
     }
 
     esp_event_handler_register(WIFI_EVENT,
@@ -79,7 +79,7 @@ void wifi_start(void)
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize WiFi (err: %d)\n", err);
-        return;
+        return err;
     }
     ESP_LOGI(TAG, "Initialized Wifi\n");
 
@@ -87,7 +87,7 @@ void wifi_start(void)
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to set WiFi Mode (err: %d)\n", err);
-        return;
+        return err;
     }
     ESP_LOGI(TAG, "Set WiFi Mode\n");
 
@@ -104,18 +104,24 @@ void wifi_start(void)
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to set WiFi configuration (err: %d)\n", err);
-        return;
+        return err;
     }
     ESP_LOGI(TAG, "Set WiFi configuration\n");
 
-    esp_wifi_start();
+    err = esp_wifi_start();
 
     ESP_LOGI(TAG, "Started wifi\n");
+
+    return err;
 }
 
-void wifi_connect(void)
+esp_err_t wifi_connect(void)
 {
-    esp_wifi_connect();
+    esp_err_t err = esp_wifi_connect();
+    if (err != ESP_OK)
+    {
+        return err;
+    }
 
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
             WIFI_CONNECTED_BIT,
@@ -125,9 +131,11 @@ void wifi_connect(void)
 
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "Connected to AP\n");
+        return ESP_OK;
     } else
     {
         ESP_LOGE(TAG, "Failed to connect to AP\n");
+        return ESP_ERR_WIFI_NOT_CONNECT;
     }
 }
 

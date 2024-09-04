@@ -52,7 +52,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
-void mqtt_start(void)
+esp_err_t mqtt_start(void)
 {
     esp_mqtt_client_config_t mqtt_config;
     memset(&mqtt_config, 0, sizeof(esp_mqtt_client_config_t));
@@ -62,14 +62,18 @@ void mqtt_start(void)
 
     mqtt_handle = esp_mqtt_client_init(&mqtt_config);
 
-    esp_mqtt_client_register_event(mqtt_handle, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    esp_err_t err = esp_mqtt_client_register_event(mqtt_handle, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    if (err != ESP_OK)
+    {
+        return err;
+    }
 
-    esp_mqtt_client_start(mqtt_handle);
+    return esp_mqtt_client_start(mqtt_handle);
 }
 
-void mqtt_send_message(const char* msg, const uint16_t msg_length)
+esp_err_t mqtt_send_message(const char* msg, const uint16_t msg_length)
 {
-    esp_mqtt_client_publish(mqtt_handle, MQTT_PUBLISH_TOPIC, msg, msg_length, 2, 0);
+    return esp_mqtt_client_publish(mqtt_handle, MQTT_PUBLISH_TOPIC, msg, msg_length, 2, 0);
 }
 
 bool mqtt_can_send_received(void)
