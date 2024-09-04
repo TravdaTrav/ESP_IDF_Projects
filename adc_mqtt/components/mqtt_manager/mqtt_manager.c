@@ -57,8 +57,8 @@ void mqtt_start(void)
     esp_mqtt_client_config_t mqtt_config;
     memset(&mqtt_config, 0, sizeof(esp_mqtt_client_config_t));
 
-    mqtt_config.broker.address.port = MQTT_PORT;
-    mqtt_config.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
+    // TODO: find MQTT Broker hostname/URI
+    mqtt_config.broker.address.uri = "mqtt://10.42.0.1";
 
     mqtt_handle = esp_mqtt_client_init(&mqtt_config);
 

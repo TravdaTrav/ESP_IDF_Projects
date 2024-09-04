@@ -50,7 +50,7 @@ static void send_mqtt_task(void* arg)
 
     esp_task_wdt_add(NULL);
 
-    // mqtt_start();
+    mqtt_start();
 
     // while (!mqtt_can_send_received())
     // {
@@ -71,7 +71,7 @@ static void send_mqtt_task(void* arg)
 
             count++;
 
-            // mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
+            mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
 
             if (count % 40 == 0)
             {

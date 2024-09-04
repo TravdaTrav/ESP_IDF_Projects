@@ -31,7 +31,6 @@ esp_err_t ADS1120::sendCommand(uint8_t command)
 
 esp_err_t ADS1120::writeRegister(uint8_t address, uint8_t value)
 {
-
   esp_err_t ret;
   spi_transaction_t t;
   memset(&t, 0, sizeof(spi_transaction_t));
