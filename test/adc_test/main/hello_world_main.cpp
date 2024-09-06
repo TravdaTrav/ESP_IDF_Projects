@@ -50,7 +50,7 @@ extern "C" void app_main(void)
     for (int i = 0; i < 12; i++)
     {
         val = 0x0800 >> i;
-        ad5626.set_level(val);
+        ad5626.setLevel(val);
         printf("Setting Level #%d!\n", i);
         vTaskDelay(500);
     }

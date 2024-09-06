@@ -18,6 +18,8 @@
 #include "ads1120.hpp"
 #include "ad5626.hpp"
 
+#include "ad5626.h"
+
 #include "wifi_manager.h"
 #include "mqtt_manager.h"
 
@@ -48,14 +50,9 @@ static void send_mqtt_task(void* arg)
 
     wifi_connect();
 
-    esp_task_wdt_add(NULL);
-
     mqtt_start();
 
-    // while (!mqtt_can_send_received())
-    // {
-        vTaskDelay(10);
-    // }
+    esp_task_wdt_add(NULL);
 
     xSemaphoreGive(start_recording_task);
 
@@ -71,7 +68,16 @@ static void send_mqtt_task(void* arg)
 
             count++;
 
-            mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
+            if (!wifi_is_connected())
+            {
+                wifi_connect();
+                mqtt_start();
+            }
+
+            if (mqtt_can_send_received())
+            {
+                mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
+            }
 
             if (count % 40 == 0)
             {
