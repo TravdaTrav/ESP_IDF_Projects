@@ -10,11 +10,13 @@ extern "C" {
 
 #include "stdbool.h"
 
-#define MQTT_MESSAGE_LENGTH             50
+#define MQTT_MESSAGE_LENGTH             100
 
 typedef struct mqtt_message
 {
-    uint32_t milliseconds;
+    uint32_t start_mill;
+    uint32_t end_mill;
+    uint8_t mac_address[6];
     uint16_t data[MQTT_MESSAGE_LENGTH];
 } mqtt_message_t;
 

@@ -9,7 +9,7 @@
 
 static const char* TAG = "mqtt_manager";
 
-#define MQTT_PUBLISH_TOPIC              "esp32/publish"
+#define MQTT_PUBLISH_TOPIC              "esp32/data"
 #define MQTT_SUBSCRIBE_TOPIC            "esp32/can_send"
 #define MQTT_PORT                       1883
 #define MQTT_SEND_MESSAGE_THRESHHOLD    RTOS_QUEUE_SIZE / 20
@@ -40,10 +40,17 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_DATA:
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
-        if (memcmp("SEND", event->data, sizeof("SEND")) == 0)
+        if (memcmp("SEND", event->data, sizeof("SEND") - 1) == 0)
         {
+            printf("Can send data now\n");
             can_send_received = true;
         }
+        else if (memcmp("NOSEND", event->data, sizeof("NOSEND") - 1) == 0)
+        {
+            printf("Cannot send data now\n");
+            can_send_received = false;
+        }
+        
         break;
     case MQTT_EVENT_ERROR:
         break;
@@ -57,7 +64,6 @@ esp_err_t mqtt_start(void)
     esp_mqtt_client_config_t mqtt_config;
     memset(&mqtt_config, 0, sizeof(esp_mqtt_client_config_t));
 
-    // TODO: find MQTT Broker hostname/URI
     mqtt_config.broker.address.uri = "mqtt://10.42.0.1";
 
     mqtt_handle = esp_mqtt_client_init(&mqtt_config);
