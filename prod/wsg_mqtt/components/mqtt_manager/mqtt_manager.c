@@ -4,6 +4,7 @@
 #include "esp_wifi.h"
 #include "mqtt_client.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 #include "mqtt_manager.h"
 
@@ -16,7 +17,11 @@ static const char* TAG = "mqtt_manager";
 
 static esp_mqtt_client_handle_t mqtt_handle;
 
+static bool is_mqtt_connected = false;
+
 static bool can_send_received;
+
+static QueueHandle_t time_queue = NULL;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -27,9 +32,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     {
     case MQTT_EVENT_CONNECTED:
         esp_mqtt_client_subscribe(client, MQTT_SUBSCRIBE_TOPIC, 2);
+        is_mqtt_connected = true;
         break;
     case MQTT_EVENT_DISCONNECTED:
-        esp_mqtt_client_reconnect(mqtt_handle);
+        is_mqtt_connected = false;
         break;
     case MQTT_EVENT_SUBSCRIBED:
         break;
@@ -40,14 +46,25 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_DATA:
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
+        
         if (memcmp("SEND", event->data, sizeof("SEND") - 1) == 0)
         {
-            printf("Can send data now\n");
             can_send_received = true;
+            mqtt_time_t pi_time;
+
+            pi_time.esp_time_micro = esp_timer_get_time();
+            memcpy(&pi_time.pi_time_micro, event->data + sizeof("SEND") - 1, sizeof(uint64_t));
+
+            if (uxQueueSpacesAvailable(time_queue) == 0)
+            {
+                    mqtt_time_t dis_time;
+                    xQueueReceive(time_queue, &dis_time, (TickType_t) 1);
+            }
+
+            xQueueSend(time_queue, &pi_time, (TickType_t) 1);
         }
-        else if (memcmp("NOSEND", event->data, sizeof("NOSEND") - 1) == 0)
+        else if (memcmp("NOSEND", event->data, sizeof("NOSEND")) == 0)
         {
-            printf("Cannot send data now\n");
             can_send_received = false;
         }
         
@@ -61,6 +78,14 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
 esp_err_t mqtt_start(void)
 {
+    esp_mqtt_client_destroy(mqtt_handle);
+
+    time_queue = xQueueCreate(2, sizeof(mqtt_time_t));
+    if (time_queue == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize time queue\n");
+    }
+
     esp_mqtt_client_config_t mqtt_config;
     memset(&mqtt_config, 0, sizeof(esp_mqtt_client_config_t));
 
@@ -74,7 +99,28 @@ esp_err_t mqtt_start(void)
         return err;
     }
 
-    return esp_mqtt_client_start(mqtt_handle);
+    err = esp_mqtt_client_start(mqtt_handle);
+    if (err != ESP_OK)
+    {
+        return err;
+    }
+
+    while (!is_mqtt_connected)
+    {
+        vTaskDelay(100);
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t mqtt_update_time(mqtt_time_t* ptr_time)
+{
+    if (uxQueueMessagesWaiting(time_queue) > 0)
+    {
+        xQueueReceive(time_queue, ptr_time, (TickType_t) 1);
+    }
+
+    return ESP_OK;
 }
 
 esp_err_t mqtt_send_message(const char* msg, const uint16_t msg_length)

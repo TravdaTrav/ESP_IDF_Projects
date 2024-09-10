@@ -13,6 +13,7 @@
 #include "esp_event.h"
 #include "esp_wifi.h"
 #include "esp_system.h"
+#include "esp_task_wdt.h"
 
 #include "wifi_manager.h"
 
@@ -49,6 +50,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 
 esp_err_t wifi_start(void)
 {
+    esp_wifi_deinit();
+
     s_wifi_event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(nvs_flash_init());
@@ -117,26 +120,13 @@ esp_err_t wifi_start(void)
 
 esp_err_t wifi_connect(void)
 {
-    esp_err_t err = esp_wifi_connect();
-    if (err != ESP_OK)
+
+    if (!is_wifi_connected)
     {
-        return err;
+        esp_wifi_connect();
     }
 
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected to AP\n");
-        return ESP_OK;
-    } else
-    {
-        ESP_LOGE(TAG, "Failed to connect to AP\n");
-        return ESP_ERR_WIFI_NOT_CONNECT;
-    }
+    return ESP_OK;
 }
 
 bool wifi_is_connected(void)

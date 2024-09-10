@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include <cstdint>
 #include <stdio.h>
-#include <inttypes.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -14,11 +14,11 @@
 #include "esp_wifi.h"
 #include "esp_task_wdt.h"
 #include "esp_log.h"
+#include "esp_timer.h"
+
 
 #include "ads1120.hpp"
 #include "ad5626.hpp"
-
-#include "ad5626.h"
 
 #include "wifi_manager.h"
 #include "mqtt_manager.h"
@@ -34,6 +34,8 @@
 
 esp_err_t start_adc(ADS1120& adc);
 
+static mqtt_time_t curr_time = {0, 0};
+
 static const char* TAG = "main";
 
 static TaskHandle_t read_adc_handle;
@@ -44,17 +46,27 @@ static SemaphoreHandle_t start_recording_task;
 
 static QueueHandle_t data_queue = NULL;
 
+void print_bytes(const char* data, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        printf("%02X ", (unsigned char)data[i]);
+    }
+    printf("\n");
+}
+
 static void send_mqtt_task(void* arg)
 {
     ESP_LOGI(TAG, "Starting Send MQTT Task\n");
 
-    wifi_start();
+    esp_task_wdt_add(NULL);
 
-    wifi_connect();
+    while (!wifi_is_connected())
+    {
+        wifi_connect();
+        vTaskDelay(1000);
+        esp_task_wdt_reset();
+    }
 
     mqtt_start();
-
-    esp_task_wdt_add(NULL);
 
     mqtt_message_t message;
 
@@ -68,24 +80,28 @@ static void send_mqtt_task(void* arg)
 
             count++;
 
-            if (!wifi_is_connected())
+            while (!wifi_is_connected())
             {
                 wifi_connect();
-                mqtt_start();
+                vTaskDelay(1000);
+                esp_task_wdt_reset();
             }
 
             if (mqtt_can_send_received())
             {
                 mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
+                // print_bytes((char*) &message, 10);
             }
+
+            mqtt_update_time(&curr_time);
 
             if (count % 40 == 0)
             {
-                ESP_LOGI(TAG, "Got 40 messages: %d\n", (int) xTaskGetTickCount());
+                ESP_LOGI(TAG, "Got 40 messages: %d, micro_time : %llu\n", (int) xTaskGetTickCount(), curr_time.pi_time_micro);
                 esp_task_wdt_reset();
             }
         }
-        vTaskDelay(20);
+        vTaskDelay(5);
     }
 }
 
@@ -116,15 +132,15 @@ static void read_adc_task(void* arg)
 
     start_adc(ads1120);
 
-    uint16_t data_val;
+    uint32_t data_index = 0;
 
-    uint32_t mes_buf_index = 0;
+    mqtt_message_t mqtt_message;
+    mqtt_message_t dis_message;
 
-    mqtt_message_t mes_buf;
-    mqtt_message_t discard_buf;
+    mqtt_message.start_micro = curr_time.pi_time_micro - curr_time.esp_time_micro + (uint64_t) esp_timer_get_time();
+    uint64_t esp_packet_start_micro = (uint64_t) esp_timer_get_time();
 
-    mes_buf.start_mill = xTaskGetTickCount();
-    esp_wifi_get_mac(WIFI_IF_STA, mes_buf.mac_address);
+    esp_wifi_get_mac(WIFI_IF_STA, mqtt_message.mac_address);
 
     uint32_t count = 0;
 
@@ -132,12 +148,18 @@ static void read_adc_task(void* arg)
     {
         if (ads1120.isDataReady())
         {
-            ads1120.readADC(&data_val);
+            mqtt_data_t data_val;
 
-            mes_buf.data[mes_buf_index] = data_val;
+            uint16_t val;
 
-            mes_buf_index++;
+            ads1120.readADC(&val);
 
+            data_val.data_point = val;
+            data_val.data_diff_micro = (uint64_t) esp_timer_get_time() - esp_packet_start_micro;
+
+            mqtt_message.data[data_index] = data_val;
+
+            data_index++;
             count++;
 
             if (count % 500 == 0)
@@ -146,18 +168,17 @@ static void read_adc_task(void* arg)
                 vTaskDelay(1);
             }
 
-            if (mes_buf_index == MQTT_MESSAGE_LENGTH)
+            if (data_index == MQTT_MESSAGE_LENGTH)
             {
                 if (uxQueueSpacesAvailable(data_queue) == 0){
-                    xQueueReceive(data_queue, &discard_buf, (TickType_t) 10);
+                    xQueueReceive(data_queue, &dis_message, (TickType_t) 10);
                 }
 
-                mes_buf.end_mill = xTaskGetTickCount();
+                xQueueSend(data_queue, &mqtt_message, (TickType_t) 10);
 
-                xQueueSend(data_queue, &mes_buf, (TickType_t) 10);
-
-                mes_buf.start_mill = xTaskGetTickCount();
-                mes_buf_index = 0;
+                esp_packet_start_micro = (uint64_t) esp_timer_get_time();
+                mqtt_message.start_micro = curr_time.pi_time_micro - curr_time.esp_time_micro + (uint64_t) esp_timer_get_time();
+                data_index = 0;
             }
         }
     }
@@ -166,6 +187,8 @@ static void read_adc_task(void* arg)
 extern "C" void app_main(void)
 {
     vTaskDelay(3000);
+
+    wifi_start();
 
     start_recording_task = xSemaphoreCreateBinary();
     if (start_recording_task == NULL)

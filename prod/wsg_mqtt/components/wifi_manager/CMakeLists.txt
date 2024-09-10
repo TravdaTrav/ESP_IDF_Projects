@@ -6,5 +6,6 @@ idf_component_register(SRCS "wifi_manager.c"
                                 nvs_flash
                                 esp_netif
                                 esp_event
+                                esp_timer
                                 log
                                 )
