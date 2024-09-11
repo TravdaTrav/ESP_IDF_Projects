@@ -42,8 +42,6 @@ static TaskHandle_t read_adc_handle;
 
 static TaskHandle_t send_mqtt_handle;
 
-static SemaphoreHandle_t start_recording_task;
-
 static QueueHandle_t data_queue = NULL;
 
 void print_bytes(const char* data, size_t size) {
@@ -90,7 +88,6 @@ static void send_mqtt_task(void* arg)
             if (mqtt_can_send_received())
             {
                 mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
-                // print_bytes((char*) &message, 10);
             }
 
             mqtt_update_time(&curr_time);
@@ -146,7 +143,7 @@ static void read_adc_task(void* arg)
 
     while (true)
     {
-        if (ads1120.isDataReady())
+        if (ads1120.isDataReady() && mqtt_can_send_received())
         {
             mqtt_data_t data_val;
 
@@ -189,12 +186,6 @@ extern "C" void app_main(void)
     vTaskDelay(3000);
 
     wifi_start();
-
-    start_recording_task = xSemaphoreCreateBinary();
-    if (start_recording_task == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to initialize can_send semaphore\n");
-    }
 
     data_queue = xQueueCreate(RTOS_QUEUE_SIZE, sizeof(mqtt_message_t));
     if (data_queue == NULL)
