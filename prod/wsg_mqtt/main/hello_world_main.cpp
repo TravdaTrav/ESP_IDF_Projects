@@ -23,12 +23,23 @@
 #include "wifi_manager.h"
 #include "mqtt_manager.h"
 
-#define SPI_MOSI_PIN    10
-#define SPI_MISO_PIN    9
-#define SPI_SCLK_PIN    8
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+    #define SPI_MOSI_PIN    10
+    #define SPI_MISO_PIN    9
+    #define SPI_SCLK_PIN    8
 
-#define ADC_CS_PIN      5
-#define ADC_DRDY_PIN    4
+    #define ADC_CS_PIN      5
+    #define ADC_DRDY_PIN    4
+#endif
+
+#ifdef CONFIG_IDF_TARGET_ESP32C6
+    #define SPI_MOSI_PIN    18
+    #define SPI_MISO_PIN    20
+    #define SPI_SCLK_PIN    19
+
+    #define ADC_CS_PIN      21
+    #define ADC_DRDY_PIN    2
+#endif
 
 #define RTOS_QUEUE_SIZE                 10
 
@@ -138,12 +149,15 @@ static void read_adc_task(void* arg)
     uint64_t esp_packet_start_micro = (uint64_t) esp_timer_get_time();
 
     esp_wifi_get_mac(WIFI_IF_STA, mqtt_message.mac_address);
+    ESP_LOGI(TAG, "Mac Address: %02x:%02x:%02x:%02x:%02x:%02x\n", mqtt_message.mac_address[0], mqtt_message.mac_address[1],   \
+                                                                  mqtt_message.mac_address[2], mqtt_message.mac_address[3],   \
+                                                                  mqtt_message.mac_address[4], mqtt_message.mac_address[5]);
 
     uint32_t count = 0;
 
     while (true)
     {
-        if (ads1120.isDataReady() && mqtt_can_send_received())
+        if (ads1120.isDataReady())// && mqtt_can_send_received())
         {
             mqtt_data_t data_val;
 
@@ -161,6 +175,7 @@ static void read_adc_task(void* arg)
 
             if (count % 500 == 0)
             {
+                ESP_LOGI(TAG, "%u\n", val);
                 esp_task_wdt_reset();
                 vTaskDelay(1);
             }
@@ -211,6 +226,13 @@ esp_err_t start_adc(ADS1120& adc)
     ESP_LOGI(TAG, "Initialized ADC\n");
 
     err = adc.setGain(1);
+    if (err)
+    {
+        ESP_LOGE(TAG, "Failed to Set ADC Gain\n");
+        return err;
+    }
+
+    err = adc.setVoltageRef(1);
     if (err)
     {
         ESP_LOGE(TAG, "Failed to Set ADC Gain\n");

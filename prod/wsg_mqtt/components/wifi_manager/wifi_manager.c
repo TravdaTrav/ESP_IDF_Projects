@@ -61,7 +61,8 @@ esp_err_t wifi_start(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     tutorial_netif = esp_netif_create_default_wifi_sta();
-    if (tutorial_netif == NULL) {
+    if (tutorial_netif == NULL)
+    {
         ESP_LOGI(TAG, "Failed to create default WiFi STA interface");
         return ESP_FAIL;
     }
@@ -123,7 +124,7 @@ esp_err_t wifi_connect(void)
 
     if (!is_wifi_connected)
     {
-        esp_wifi_connect();
+        return esp_wifi_connect();
     }
 
     return ESP_OK;

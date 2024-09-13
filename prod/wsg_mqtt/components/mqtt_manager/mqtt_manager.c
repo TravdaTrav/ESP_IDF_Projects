@@ -92,6 +92,10 @@ esp_err_t mqtt_start(void)
     mqtt_config.broker.address.uri = "mqtt://10.42.0.1";
 
     mqtt_handle = esp_mqtt_client_init(&mqtt_config);
+    if (mqtt_handle == NULL)
+    {
+        return ESP_ERR_NOT_FINISHED;
+    }
 
     esp_err_t err = esp_mqtt_client_register_event(mqtt_handle, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     if (err != ESP_OK)
@@ -118,9 +122,10 @@ esp_err_t mqtt_update_time(mqtt_time_t* ptr_time)
     if (uxQueueMessagesWaiting(time_queue) > 0)
     {
         xQueueReceive(time_queue, ptr_time, (TickType_t) 1);
+        return ESP_OK;
     }
 
-    return ESP_OK;
+    return ESP_ERR_NOT_FINISHED;
 }
 
 esp_err_t mqtt_send_message(const char* msg, const uint16_t msg_length)
