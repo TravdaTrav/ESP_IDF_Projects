@@ -14,6 +14,7 @@
 #include "esp_wifi.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
+#include "driver/gpio.h"
 
 #include "wifi_manager.h"
 
@@ -50,6 +51,14 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 
 esp_err_t wifi_start(void)
 {
+#ifdef CONFIG_IDF_TARGET_ESP32C6
+    gpio_set_direction(GPIO_NUM_3, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_3, 0);
+
+    gpio_set_direction(GPIO_NUM_14, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_14, 1);
+#endif
+
     esp_wifi_deinit();
 
     s_wifi_event_group = xEventGroupCreate();
@@ -86,6 +95,14 @@ esp_err_t wifi_start(void)
         return err;
     }
     ESP_LOGI(TAG, "Initialized Wifi\n");
+
+    err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to set WiFi Mode (err: %d)\n", err);
+        return err;
+    }
+    ESP_LOGI(TAG, "Set WiFi Mode\n");
 
     err = esp_wifi_set_mode(WIFI_MODE_STA);
     if (err != ESP_OK)

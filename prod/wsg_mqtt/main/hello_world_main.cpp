@@ -71,7 +71,7 @@ static void send_mqtt_task(void* arg)
     while (!wifi_is_connected())
     {
         wifi_connect();
-        vTaskDelay(1000);
+        vTaskDelay(10000);
         esp_task_wdt_reset();
     }
 
@@ -92,7 +92,7 @@ static void send_mqtt_task(void* arg)
             while (!wifi_is_connected())
             {
                 wifi_connect();
-                vTaskDelay(1000);
+                vTaskDelay(10000);
                 esp_task_wdt_reset();
             }
 

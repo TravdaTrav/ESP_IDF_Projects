@@ -130,7 +130,7 @@ esp_err_t mqtt_update_time(mqtt_time_t* ptr_time)
 
 esp_err_t mqtt_send_message(const char* msg, const uint16_t msg_length)
 {
-    return esp_mqtt_client_publish(mqtt_handle, MQTT_PUBLISH_TOPIC, msg, msg_length, 2, 0);
+    return esp_mqtt_client_publish(mqtt_handle, MQTT_PUBLISH_TOPIC, msg, msg_length, 0, 0);
 }
 
 bool mqtt_can_send_received(void)
