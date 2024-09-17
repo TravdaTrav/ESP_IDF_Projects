@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include <cstdint>
 #include <stdio.h>
-#include <inttypes.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -14,6 +14,8 @@
 #include "esp_wifi.h"
 #include "esp_task_wdt.h"
 #include "esp_log.h"
+#include "esp_timer.h"
+
 
 #include "ads1120.hpp"
 #include "ad5626.hpp"
@@ -21,16 +23,29 @@
 #include "wifi_manager.h"
 #include "mqtt_manager.h"
 
-#define SPI_MOSI_PIN    10
-#define SPI_MISO_PIN    9
-#define SPI_SCLK_PIN    8
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+    #define SPI_MOSI_PIN    10
+    #define SPI_MISO_PIN    9
+    #define SPI_SCLK_PIN    8
 
-#define ADC_CS_PIN      5
-#define ADC_DRDY_PIN    4
+    #define ADC_CS_PIN      5
+    #define ADC_DRDY_PIN    4
+#endif
+
+#ifdef CONFIG_IDF_TARGET_ESP32C6
+    #define SPI_MOSI_PIN    18
+    #define SPI_MISO_PIN    20
+    #define SPI_SCLK_PIN    19
+
+    #define ADC_CS_PIN      21
+    #define ADC_DRDY_PIN    2
+#endif
 
 #define RTOS_QUEUE_SIZE                 10
 
 esp_err_t start_adc(ADS1120& adc);
+
+static mqtt_time_t curr_time = {0, 0};
 
 static const char* TAG = "main";
 
@@ -38,21 +53,29 @@ static TaskHandle_t read_adc_handle;
 
 static TaskHandle_t send_mqtt_handle;
 
-static SemaphoreHandle_t start_recording_task;
-
 static QueueHandle_t data_queue = NULL;
+
+void print_bytes(const char* data, size_t size) {
+    for (size_t i = 0; i < size; i++) {
+        printf("%02X ", (unsigned char)data[i]);
+    }
+    printf("\n");
+}
 
 static void send_mqtt_task(void* arg)
 {
     ESP_LOGI(TAG, "Starting Send MQTT Task\n");
 
-    wifi_start();
+    esp_task_wdt_add(NULL);
 
-    wifi_connect();
+    while (!wifi_is_connected())
+    {
+        wifi_connect();
+        vTaskDelay(10000);
+        esp_task_wdt_reset();
+    }
 
     mqtt_start();
-
-    esp_task_wdt_add(NULL);
 
     mqtt_message_t message;
 
@@ -66,10 +89,11 @@ static void send_mqtt_task(void* arg)
 
             count++;
 
-            if (!wifi_is_connected())
+            while (!wifi_is_connected())
             {
                 wifi_connect();
-                mqtt_start();
+                vTaskDelay(10000);
+                esp_task_wdt_reset();
             }
 
             if (mqtt_can_send_received())
@@ -77,13 +101,15 @@ static void send_mqtt_task(void* arg)
                 mqtt_send_message((char*) &message, sizeof(mqtt_message_t));
             }
 
+            mqtt_update_time(&curr_time);
+
             if (count % 40 == 0)
             {
-                ESP_LOGI(TAG, "Got 40 messages: %d\n", (int) xTaskGetTickCount());
+                ESP_LOGI(TAG, "Got 40 messages: %d, micro_time : %llu\n", (int) xTaskGetTickCount(), curr_time.pi_time_micro);
                 esp_task_wdt_reset();
             }
         }
-        vTaskDelay(20);
+        vTaskDelay(5);
     }
 }
 
@@ -114,48 +140,57 @@ static void read_adc_task(void* arg)
 
     start_adc(ads1120);
 
-    uint16_t data_val;
+    uint32_t data_index = 0;
 
-    uint32_t mes_buf_index = 0;
+    mqtt_message_t mqtt_message;
+    mqtt_message_t dis_message;
 
-    mqtt_message_t mes_buf;
-    mqtt_message_t discard_buf;
+    mqtt_message.start_micro = curr_time.pi_time_micro - curr_time.esp_time_micro + (uint64_t) esp_timer_get_time();
+    uint64_t esp_packet_start_micro = (uint64_t) esp_timer_get_time();
 
-    mes_buf.start_mill = xTaskGetTickCount();
-    esp_wifi_get_mac(WIFI_IF_STA, mes_buf.mac_address);
+    esp_wifi_get_mac(WIFI_IF_STA, mqtt_message.mac_address);
+    ESP_LOGI(TAG, "Mac Address: %02x:%02x:%02x:%02x:%02x:%02x\n", mqtt_message.mac_address[0], mqtt_message.mac_address[1],   \
+                                                                  mqtt_message.mac_address[2], mqtt_message.mac_address[3],   \
+                                                                  mqtt_message.mac_address[4], mqtt_message.mac_address[5]);
 
     uint32_t count = 0;
 
     while (true)
     {
-        if (ads1120.isDataReady())
+        if (ads1120.isDataReady())// && mqtt_can_send_received())
         {
-            ads1120.readADC(&data_val);
+            mqtt_data_t data_val;
 
-            mes_buf.data[mes_buf_index] = data_val;
+            uint16_t val;
 
-            mes_buf_index++;
+            ads1120.readADC(&val);
 
+            data_val.data_point = val;
+            data_val.data_diff_micro = (uint64_t) esp_timer_get_time() - esp_packet_start_micro;
+
+            mqtt_message.data[data_index] = data_val;
+
+            data_index++;
             count++;
 
             if (count % 500 == 0)
             {
+                ESP_LOGI(TAG, "%u\n", val);
                 esp_task_wdt_reset();
                 vTaskDelay(1);
             }
 
-            if (mes_buf_index == MQTT_MESSAGE_LENGTH)
+            if (data_index == MQTT_MESSAGE_LENGTH)
             {
                 if (uxQueueSpacesAvailable(data_queue) == 0){
-                    xQueueReceive(data_queue, &discard_buf, (TickType_t) 10);
+                    xQueueReceive(data_queue, &dis_message, (TickType_t) 10);
                 }
 
-                mes_buf.end_mill = xTaskGetTickCount();
+                xQueueSend(data_queue, &mqtt_message, (TickType_t) 10);
 
-                xQueueSend(data_queue, &mes_buf, (TickType_t) 10);
-
-                mes_buf.start_mill = xTaskGetTickCount();
-                mes_buf_index = 0;
+                esp_packet_start_micro = (uint64_t) esp_timer_get_time();
+                mqtt_message.start_micro = curr_time.pi_time_micro - curr_time.esp_time_micro + (uint64_t) esp_timer_get_time();
+                data_index = 0;
             }
         }
     }
@@ -165,11 +200,7 @@ extern "C" void app_main(void)
 {
     vTaskDelay(3000);
 
-    start_recording_task = xSemaphoreCreateBinary();
-    if (start_recording_task == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to initialize can_send semaphore\n");
-    }
+    wifi_start();
 
     data_queue = xQueueCreate(RTOS_QUEUE_SIZE, sizeof(mqtt_message_t));
     if (data_queue == NULL)
@@ -195,6 +226,13 @@ esp_err_t start_adc(ADS1120& adc)
     ESP_LOGI(TAG, "Initialized ADC\n");
 
     err = adc.setGain(1);
+    if (err)
+    {
+        ESP_LOGE(TAG, "Failed to Set ADC Gain\n");
+        return err;
+    }
+
+    err = adc.setVoltageRef(1);
     if (err)
     {
         ESP_LOGE(TAG, "Failed to Set ADC Gain\n");

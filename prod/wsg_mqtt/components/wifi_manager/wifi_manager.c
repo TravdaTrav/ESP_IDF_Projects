@@ -13,6 +13,8 @@
 #include "esp_event.h"
 #include "esp_wifi.h"
 #include "esp_system.h"
+#include "esp_task_wdt.h"
+#include "driver/gpio.h"
 
 #include "wifi_manager.h"
 
@@ -49,6 +51,16 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 
 esp_err_t wifi_start(void)
 {
+#ifdef CONFIG_IDF_TARGET_ESP32C6
+    gpio_set_direction(GPIO_NUM_3, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_3, 0);
+
+    gpio_set_direction(GPIO_NUM_14, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_14, 1);
+#endif
+
+    esp_wifi_deinit();
+
     s_wifi_event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(nvs_flash_init());
@@ -58,7 +70,8 @@ esp_err_t wifi_start(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     tutorial_netif = esp_netif_create_default_wifi_sta();
-    if (tutorial_netif == NULL) {
+    if (tutorial_netif == NULL)
+    {
         ESP_LOGI(TAG, "Failed to create default WiFi STA interface");
         return ESP_FAIL;
     }
@@ -82,6 +95,14 @@ esp_err_t wifi_start(void)
         return err;
     }
     ESP_LOGI(TAG, "Initialized Wifi\n");
+
+    err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to set WiFi Mode (err: %d)\n", err);
+        return err;
+    }
+    ESP_LOGI(TAG, "Set WiFi Mode\n");
 
     err = esp_wifi_set_mode(WIFI_MODE_STA);
     if (err != ESP_OK)
@@ -117,26 +138,13 @@ esp_err_t wifi_start(void)
 
 esp_err_t wifi_connect(void)
 {
-    esp_err_t err = esp_wifi_connect();
-    if (err != ESP_OK)
+
+    if (!is_wifi_connected)
     {
-        return err;
+        return esp_wifi_connect();
     }
 
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected to AP\n");
-        return ESP_OK;
-    } else
-    {
-        ESP_LOGE(TAG, "Failed to connect to AP\n");
-        return ESP_ERR_WIFI_NOT_CONNECT;
-    }
+    return ESP_OK;
 }
 
 bool wifi_is_connected(void)
