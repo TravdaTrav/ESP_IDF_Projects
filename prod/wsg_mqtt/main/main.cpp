@@ -162,7 +162,11 @@ static void read_adc_task(void* arg)
 
             uint16_t val;
 
-            ads1120.readADC(&val);
+            err = ads1120.readADC(&val);
+            if (err)
+            {
+                continue;
+            }
 
             data_val.data_point = val;
             data_val.data_diff_micro = (uint64_t) esp_timer_get_time() - esp_packet_start_micro;
