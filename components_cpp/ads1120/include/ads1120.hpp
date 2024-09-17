@@ -54,37 +54,37 @@ class ADS1120
 public:
   ADS1120();
 
-  esp_err_t writeRegister(uint8_t address, uint8_t value);
-  esp_err_t readRegister(uint8_t address, uint8_t *data);
-  esp_err_t init(gpio_num_t cs_pin, gpio_num_t drdy_pin, spi_host_device_t spi_host);
+  esp_err_t writeRegister(uint8_t t_address, uint8_t t_value);
+  esp_err_t readRegister(uint8_t t_address, uint8_t *t_data);
+  esp_err_t init(gpio_num_t t_cs_pin, gpio_num_t t_drdy_pin, spi_host_device_t t_spi_host);
   bool isDataReady(void);
-  esp_err_t readADC(uint16_t *data);
-  esp_err_t sendCommand(uint8_t command);
+  esp_err_t readADC(uint16_t *t_data);
+  esp_err_t sendCommand(uint8_t t_command);
   esp_err_t reset(void);
   esp_err_t startSync(void);
   esp_err_t powerDown(void);
   esp_err_t rdata(void);
-  esp_err_t writeRegisterMasked(uint8_t value, uint8_t mask, uint8_t address);
-  esp_err_t setMultiplexer(uint8_t value);
-  esp_err_t setGain(uint8_t gain);
-  esp_err_t setPGAbypass(bool value);
-  esp_err_t setDataRate(uint8_t value);
-  esp_err_t setOpMode(uint8_t value);
-  esp_err_t setConversionMode(uint8_t value);
-  esp_err_t setTemperatureMode(uint8_t value);
-  esp_err_t setBurnoutCurrentSources(bool value);
-  esp_err_t setVoltageRef(uint8_t value);
-  esp_err_t setFIR(uint8_t value);
-  esp_err_t setPowerSwitch(uint8_t value);
-  esp_err_t setIDACcurrent(uint8_t value);
-  esp_err_t setIDAC1routing(uint8_t value);
-  esp_err_t setIDAC2routing(uint8_t value);
-  esp_err_t setDRDYmode(uint8_t value);
+  esp_err_t writeRegisterMasked(uint8_t t_value, uint8_t t_mask, uint8_t t_address);
+  esp_err_t setMultiplexer(uint8_t t_value);
+  esp_err_t setGain(uint8_t t_gain);
+  esp_err_t setPGAbypass(bool t_value);
+  esp_err_t setDataRate(uint8_t t_value);
+  esp_err_t setOpMode(uint8_t t_value);
+  esp_err_t setConversionMode(uint8_t t_value);
+  esp_err_t setTemperatureMode(uint8_t t_value);
+  esp_err_t setBurnoutCurrentSources(bool t_value);
+  esp_err_t setVoltageRef(uint8_t t_value);
+  esp_err_t setFIR(uint8_t t_value);
+  esp_err_t setPowerSwitch(uint8_t t_value);
+  esp_err_t setIDACcurrent(uint8_t t_value);
+  esp_err_t setIDAC1routing(uint8_t t_value);
+  esp_err_t setIDAC2routing(uint8_t t_value);
+  esp_err_t setDRDYmode(uint8_t t_value);
 
 private:
-  gpio_num_t ADS1120_CS_PIN;
-  gpio_num_t ADS1120_DRDY_PIN;
-  spi_device_handle_t spi_dev;
+  gpio_num_t m_cs_pin;
+  gpio_num_t m_drdy_pin;
+  spi_device_handle_t m_spi_dev;
 };
 
 #endif
