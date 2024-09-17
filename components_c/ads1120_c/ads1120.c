@@ -29,20 +29,7 @@ esp_err_t ads1120_send_command(uint8_t command)
     t.tx_data[0] = command;
     t.length = 1 * 8;
 
-    ret = spi_device_queue_trans(spi_dev, &t, 1); // Transmit!
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
-
-    spi_transaction_t* tptr;
-
-    ret = spi_device_get_trans_result(spi_dev, &tptr, 5);
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
-
+    ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
     return ret;
 }
 
@@ -58,20 +45,7 @@ esp_err_t ads1120_write_reg(uint8_t address, uint8_t value)
     t.tx_data[1] = value;
     t.length = 2 * 8; // 2 bytes
 
-    ret = spi_device_queue_trans(spi_dev, &t, 1); // Transmit!
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
-
-    spi_transaction_t* tptr;
-
-    ret = spi_device_get_trans_result(spi_dev, &tptr, 5);
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
-
+    ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
     return ret;
 }
 
@@ -87,19 +61,7 @@ esp_err_t ads1120_read_reg(uint8_t address, uint8_t *data_ptr)
     t.tx_data[0] = (CMD_RREG | (address << 2));
     t.tx_data[1] = SPI_MASTER_DUMMY;
 
-    ret = spi_device_queue_trans(spi_dev, &t, 1); // Transmit!
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
-
-    spi_transaction_t* tptr;
-
-    ret = spi_device_get_trans_result(spi_dev, &tptr, 5);
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
+    ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
     *data_ptr = t.rx_data[1];
     return ret;
 }
@@ -149,22 +111,9 @@ esp_err_t ads1120_read_adc(uint16_t *data_ptr)
     t.length = 2 * 8;   // 2 bytes
     t.rxlength = 2 * 8; // 2 bytes
 
-    ret = spi_device_queue_trans(spi_dev, &t, 1); // Transmit!
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
-
-    spi_transaction_t* tptr;
-
-    ret = spi_device_get_trans_result(spi_dev, &tptr, 5);
-    if (ret != ESP_OK)
-    {
-        return ret;
-    }
-
-    *data_ptr = tptr->rx_data[0];
-    *data_ptr = (*data_ptr << 8) | tptr->rx_data[1];
+    ret = spi_device_polling_transmit(spi_dev, &t); // Transmit!
+    *data_ptr = t.rx_data[0];
+    *data_ptr = (*data_ptr << 8) | t.rx_data[1];
     return ret;
 }
 
