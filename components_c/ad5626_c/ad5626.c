@@ -70,8 +70,16 @@ esp_err_t ad5626_set_level(const uint16_t new_dac_level)
     t.tx_buffer = &new_level;
     t.length = 12;
 
-    esp_err_t ret = spi_device_polling_transmit(ad5626_spi_dev, &t);
-    if (ret)
+    esp_err_t ret = spi_device_queue_trans(ad5626_spi_dev, &t, 1); // Transmit!
+    if (ret != ESP_OK)
+    {
+        return ret;
+    }
+
+    spi_transaction_t* tptr;
+
+    ret = spi_device_get_trans_result(ad5626_spi_dev, &tptr, 5);
+    if (ret != ESP_OK)
     {
         return ret;
     }
