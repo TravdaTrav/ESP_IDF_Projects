@@ -96,7 +96,7 @@ esp_err_t ads1120_spi_init(gpio_num_t cs_pin, gpio_num_t drdy_pin)
 
 bool ads1120_is_data_ready()
 {
-    return gpio_get_level(ADS1120_DRDY_PIN);
+    return !gpio_get_level(ADS1120_DRDY_PIN);
 }
 
 esp_err_t ads1120_read_adc(uint16_t *data_ptr)
