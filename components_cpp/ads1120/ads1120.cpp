@@ -25,20 +25,12 @@ esp_err_t ADS1120::sendCommand(uint8_t t_command)
   t.tx_data[0] = t_command;
   t.length = 1 * 8;
 
-  ret = spi_device_queue_trans(m_spi_dev, &t, 1); // Transmit!
+  ret = spi_device_polling_transmit(m_spi_dev, &t); // Transmit!
   if (ret != ESP_OK)
   {
     return ret;
   }
 
-  spi_transaction_t* tptr;
-
-  ret = spi_device_get_trans_result(m_spi_dev, &tptr, 5);
-  if (ret != ESP_OK)
-  {
-    return ret;
-  }
-  
   return ret;
 }
 
@@ -53,15 +45,7 @@ esp_err_t ADS1120::writeRegister(uint8_t t_address, uint8_t t_value)
   t.tx_data[1] = t_value;
   t.length = 2 * 8; // 2 bytes
 
-  ret = spi_device_queue_trans(m_spi_dev, &t, 1); // Transmit!
-  if (ret != ESP_OK)
-  {
-    return ret;
-  }
-
-  spi_transaction_t* tptr;
-
-  ret = spi_device_get_trans_result(m_spi_dev, &tptr, 5);
+  ret = spi_device_polling_transmit(m_spi_dev, &t); // Transmit!
   if (ret != ESP_OK)
   {
     return ret;
@@ -82,21 +66,13 @@ esp_err_t ADS1120::readRegister(uint8_t t_address, uint8_t *t_data)
   t.tx_data[0] = (ADS1120_CMD_RREG | (t_address << 2));
   t.tx_data[1] = ADS1120_SPI_MASTER_DUMMY;
 
-  ret = spi_device_queue_trans(m_spi_dev, &t, 1); // Transmit!
+  ret = spi_device_polling_transmit(m_spi_dev, &t); // Transmit!
   if (ret != ESP_OK)
   {
     return ret;
   }
 
-  spi_transaction_t* tptr;
-
-  ret = spi_device_get_trans_result(m_spi_dev, &tptr, 5);
-  if (ret != ESP_OK)
-  {
-    return ret;
-  }
-
-  *t_data = tptr->rx_data[1];
+  *t_data = t.rx_data[1];
   return ret;
 }
 
@@ -154,22 +130,14 @@ esp_err_t ADS1120::readADC(uint16_t *t_data)
   t.length = 2 * 8;   // 2 bytes
   t.rxlength = 2 * 8; // 2 bytes
 
-  ret = spi_device_queue_trans(m_spi_dev, &t, 1); // Transmit!
-  if (ret != ESP_OK)
-  {
-    return ret;
-  }
-
-  spi_transaction_t* tptr;
-
-  ret = spi_device_get_trans_result(m_spi_dev, &tptr, 5);
+  ret = spi_device_polling_transmit(m_spi_dev, &t); // Transmit!
   if (ret != ESP_OK)
   {
     return ret;
   }
   
-  *t_data = tptr->rx_data[0];
-  *t_data = (*t_data << 8) | tptr->rx_data[1];
+  *t_data = t.rx_data[0];
+  *t_data = (*t_data << 8) | t.rx_data[1];
   return ret;
 }
 
